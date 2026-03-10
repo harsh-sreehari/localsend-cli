@@ -8,16 +8,6 @@
 
 A standalone, zero-dependency Command Line Interface (CLI) for [LocalSend](https://localsend.org). Send and receive files directly from your terminal using the LocalSend Protocol v2.1 — no GUI required.
 
-```
-     _           _        __ _ _
-    | |         | |      / _(_) |
-  __| | ___  ___| | __  | |_ ___| |_
- / _` |/ _ \/ __| |/ /  |  _/ _ \ __|
-| (_| |  __/\__ \   <   | ||  __/ |_
- \__,_|\___||___/_|\_\  |_| \___|\__|
-
-```
-
 ## Why CLI?
 
 - **No GUI overhead** — Lightweight, fast, perfect for servers/containers
