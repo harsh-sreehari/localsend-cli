@@ -13,9 +13,11 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	lscrypto "github.com/localsend-cli/internal/crypto"
 	"github.com/localsend-cli/internal/protocol"
+	"github.com/schollz/progressbar/v3"
 )
 
 // Send sends one or more files to the target device.
@@ -123,11 +125,19 @@ func uploadFile(ctx context.Context, client *http.Client, baseURL, sessionID, fi
 
 	fmt.Printf("  ↑ Uploading %-30s (%s)\n", info.FileName, humanSize(info.Size))
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, uploadURL, &progressReader{
-		r:     f,
-		total: info.Size,
-		name:  info.FileName,
-	})
+	bar := progressbar.NewOptions(
+		int(info.Size),
+		progressbar.OptionSetDescription(info.FileName),
+		progressbar.OptionSetWriter(os.Stdout),
+		progressbar.OptionShowBytes(true),
+		progressbar.OptionShowCount(),
+		progressbar.OptionOnCompletion(func() {
+			fmt.Println()
+		}),
+		progressbar.OptionThrottle(100*time.Millisecond),
+	)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, uploadURL, bar)
 	if err != nil {
 		return err
 	}
@@ -158,29 +168,10 @@ func cancelSession(client *http.Client, baseURL, sessionID string) error {
 	return nil
 }
 
-// progressReader wraps an io.Reader and prints a simple progress indicator.
-type progressReader struct {
-	r       io.Reader
-	total   int64
-	read    int64
-	name    string
-	lastPct int
-}
-
-func (pr *progressReader) Read(p []byte) (int, error) {
-	n, err := pr.r.Read(p)
-	pr.read += int64(n)
-	if pr.total > 0 {
-		pct := int(float64(pr.read) / float64(pr.total) * 100)
-		if pct/10 > pr.lastPct/10 {
-			pr.lastPct = pct
-			fmt.Printf("\r    %3d%%", pct)
-			if pct == 100 {
-				fmt.Println()
-			}
-		}
-	}
-	return n, err
+func fileIndexFromID(id string) int {
+	var idx int
+	fmt.Sscanf(id, "file_%d", &idx)
+	return idx
 }
 
 func mimeType(path string) string {
@@ -203,10 +194,4 @@ func humanSize(b int64) string {
 		exp++
 	}
 	return fmt.Sprintf("%.1f %cB", float64(b)/float64(div), "KMGTPE"[exp])
-}
-
-func fileIndexFromID(id string) int {
-	var idx int
-	fmt.Sscanf(id, "file_%d", &idx)
-	return idx
 }

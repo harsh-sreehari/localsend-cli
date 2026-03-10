@@ -15,6 +15,7 @@ import (
 
 	lscrypto "github.com/localsend-cli/internal/crypto"
 	"github.com/localsend-cli/internal/protocol"
+	"github.com/schollz/progressbar/v3"
 )
 
 const port = 53317
@@ -33,10 +34,10 @@ type Server struct {
 	AutoAccept bool
 	KeepAlive  bool // if false, exit after first completed transfer
 
-	mu          sync.Mutex
-	sessions    map[string]*session
-	seenPeers   map[string]bool // fingerprint -> logged already
-	done        chan struct{}
+	mu        sync.Mutex
+	sessions  map[string]*session
+	seenPeers map[string]bool // fingerprint -> logged already
+	done      chan struct{}
 }
 
 // New creates a Server ready to call ListenAndServe.
@@ -223,7 +224,19 @@ func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 	defer f.Close()
 
 	fmt.Printf("  ↓ Receiving %-40s → %s\n", fileInfo.FileName, outPath)
-	n, err := io.Copy(f, r.Body)
+
+	contentLength := r.ContentLength
+	bar := progressbar.NewOptions(
+		int(contentLength),
+		progressbar.OptionSetDescription(fileInfo.FileName),
+		progressbar.OptionShowBytes(true),
+		progressbar.OptionShowCount(),
+		progressbar.OptionOnCompletion(func() {
+			fmt.Println()
+		}),
+	)
+
+	n, err := io.Copy(f, io.TeeReader(r.Body, bar))
 	if err != nil {
 		fmt.Printf("  ✗ Error receiving %s: %v\n", fileInfo.FileName, err)
 		w.WriteHeader(http.StatusInternalServerError)

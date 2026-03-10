@@ -32,6 +32,9 @@ func main() {
 		cmdReceive(os.Args[2:])
 	case "help", "--help", "-h":
 		printUsage()
+	case "--version", "-v":
+		fmt.Printf("localsend-cli v%s\n", version)
+		os.Exit(0)
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown command: %s\n\n", os.Args[1])
 		printUsage()
@@ -90,7 +93,8 @@ func cmdSend(args []string) {
 	devices := discovery.Discover(ctx, self, cert, *timeout)
 
 	if len(devices) == 0 {
-		fmt.Println("No LocalSend devices found on the network.")
+		fmt.Fprintln(os.Stderr, "Error: No LocalSend devices found on the network.")
+		fmt.Fprintln(os.Stderr, "Check your network connection and ensure LocalSend is running on other devices.")
 		os.Exit(1)
 	}
 
